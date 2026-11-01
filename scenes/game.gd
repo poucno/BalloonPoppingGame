@@ -4,9 +4,9 @@ const GameManager = preload("res://scripts/game_manager.gd")
 const Balloon = preload("res://scripts/balloon.gd")
 const SfxGenerator = preload("res://scripts/sfx_generator.gd")
 
-const GRID_SLOTS := 20
+const GRID_SLOTS := 5
 const GRID_COLS := 5
-const GRID_ROWS := 4
+const GRID_ROWS := 1
 const QUESTION_TIME := 15.0
 
 var rng := RandomNumberGenerator.new()
@@ -234,7 +234,7 @@ func _spawn_balloons() -> void:
 		b.size = bsz
 		b.base_position = Vector2(
 			side + c * xs + xs / 2.0 - bsz.x / 2.0,
-			top + r * ys)
+			top + r * ys + (ys - bsz.y) / 2.0)
 		b.position = b.base_position
 		b.bob_speed = rng.randf_range(1.2, 2.0)
 		b.bob_amplitude = rng.randf_range(4.0, 8.0)
