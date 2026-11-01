@@ -69,16 +69,12 @@ func _create_ui() -> void:
 	info.position = Vector2(cx - 260, vs.y * 0.44)
 	add_child(info)
 
-	# Buttons
+	# Button
 	var bw := 225.0
 	var bh := 60.0
-	var gap := 30.0
 	_styled_button("🎮  Play Again",
-		Vector2(cx - bw - gap / 2.0, vs.y * 0.56),
+		Vector2(cx - bw / 2.0, vs.y * 0.56),
 		Vector2(bw, bh), _on_play_again, Color("#22c55e"))
-	_styled_button("Main Menu",
-		Vector2(cx + gap / 2.0, vs.y * 0.56),
-		Vector2(bw, bh), _on_main_menu, Color("#2563eb"))
 
 
 # Navigation 
@@ -86,11 +82,6 @@ func _create_ui() -> void:
 func _on_play_again() -> void:
 	_play_sfx(sfx_click)
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
-
-
-func _on_main_menu() -> void:
-	_play_sfx(sfx_click)
-	get_tree().change_scene_to_file("res://main.tscn")
 
 
 # Celebration confetti
@@ -129,7 +120,7 @@ func _spawn_decorative_balloons() -> void:
 	var vs := get_viewport_rect().size
 	for i in 6:
 		var b := Balloon.new()
-		b.answer = randi_range(0, 9)
+		b.answer = str(randi_range(0, 9))
 		b.set_sprite_index(i)
 		b.size = Vector2(70, 96)
 		b.is_active = false
