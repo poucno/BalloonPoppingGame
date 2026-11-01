@@ -1,0 +1,30 @@
+# Godot generated files
+.godot/
+
+# Git metadata
+.git/
+.gitignore
+
+# Local editor settings
+.vscode/
+.idea/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Local build outputs
+build/
+dist/
+exports/
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Docker-related local files
+docker-compose.override.yml
+
+# .env files
+.env
+.env.*
