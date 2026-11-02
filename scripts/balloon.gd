@@ -1,6 +1,6 @@
 extends Control
 
-signal popped(answer: int)
+signal popped(answer: String)
 
 const SPRITE_PATHS: Array[String] = [
 	"res://sprites/balloon_form_1_1.png",
@@ -44,7 +44,7 @@ static func get_texture(index: int) -> Texture2D:
 	return _cached_textures[posmod(index, _cached_textures.size())]
 
 
-var answer := 0
+var answer: String = ""
 var balloon_color := Color.WHITE
 var sprite_index := 0
 var texture: Texture2D

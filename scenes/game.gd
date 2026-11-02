@@ -4,17 +4,28 @@ const GameManager = preload("res://scripts/game_manager.gd")
 const Balloon = preload("res://scripts/balloon.gd")
 const SfxGenerator = preload("res://scripts/sfx_generator.gd")
 
+const GRID_SLOTS := 5
+const GRID_COLS := 5
+const GRID_ROWS := 1
+const QUESTION_TIME := 15.0
+
 var rng := RandomNumberGenerator.new()
 var balloons: Array = []
-var correct_answer := 0
+var questions: Array = []
+var question_index := 0
+var possible_answers: Array = []
+var correct_answer := ""
 var current_equation := ""
 var score := 0
 var streak := 0
-var round_number := 0
+var correct_count := 0
+var wrong_count := 0
+var missed_count := 0
 var round_active := false
 var time_remaining := 0.0
 var round_time := 0.0
 var last_tick_sec := -1
+var _start_time_msec := 0
 
 # UI
 var equation_label: Label
@@ -34,6 +45,22 @@ func _ready() -> void:
 	rng.randomize()
 	_setup_audio()
 	_create_ui()
+
+	if GameBridge.questions.is_empty():
+		GameBridge.questions_received.connect(_on_questions_received)
+	else:
+		_on_questions_received(GameBridge.questions)
+
+
+func _on_questions_received(p_questions: Array) -> void:
+	questions = p_questions
+	question_index = 0
+	score = 0
+	streak = 0
+	correct_count = 0
+	wrong_count = 0
+	missed_count = 0
+	_start_time_msec = Time.get_ticks_msec()
 	_start_round()
 
 
@@ -122,6 +149,7 @@ func _create_ui() -> void:
 
 	equation_label = _make_label("", 48, Color("#243052"))
 	equation_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	equation_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	equation_label.position = Vector2(vs.x / 2.0 - 260, 50)
 	equation_label.size = Vector2(520, 62)
 	add_child(equation_label)
@@ -147,132 +175,67 @@ func _make_label(text: String, fs: int, col: Color) -> Label:
 	return l
 
 
-# Problem generation
-
-func _generate_problem() -> void:
-	var d: int = GameManager.current_difficulty
-	match d:
-		GameManager.Difficulty.EASY:
-			var a := rng.randi_range(1, 9)
-			var b := rng.randi_range(1, 9)
-			correct_answer = a + b
-			current_equation = "%d + %d = ?" % [a, b]
-
-		GameManager.Difficulty.MEDIUM:
-			var op := rng.randi_range(0, 2)
-			if op == 0:
-				var a := rng.randi_range(2, 15)
-				var b := rng.randi_range(2, 15)
-				correct_answer = a + b
-				current_equation = "%d + %d = ?" % [a, b]
-			elif op == 1:
-				var a := rng.randi_range(5, 20)
-				var b := rng.randi_range(1, a - 1)
-				correct_answer = a - b
-				current_equation = "%d − %d = ?" % [a, b]
-			else:
-				var a := rng.randi_range(2, 6)
-				var b := rng.randi_range(2, 6)
-				correct_answer = a * b
-				current_equation = "%d × %d = ?" % [a, b]
-
-		GameManager.Difficulty.HARD:
-			var op := rng.randi_range(0, 2)
-			if op == 0:
-				var a := rng.randi_range(10, 50)
-				var b := rng.randi_range(10, 50)
-				correct_answer = a + b
-				current_equation = "%d + %d = ?" % [a, b]
-			elif op == 1:
-				var a := rng.randi_range(20, 60)
-				var b := rng.randi_range(5, a - 1)
-				correct_answer = a - b
-				current_equation = "%d − %d = ?" % [a, b]
-			else:
-				var a := rng.randi_range(2, 12)
-				var b := rng.randi_range(2, 9)
-				correct_answer = a * b
-				current_equation = "%d × %d = ?" % [a, b]
-
-
-# Answers 
-
-func _build_answers(count: int) -> Array[int]:
-	var answers: Array[int] = [correct_answer]
-	while answers.size() < count:
-		var wrong: int
-		if rng.randf() < 0.4:
-			wrong = correct_answer + rng.randi_range(-5, 5)
-		else:
-			wrong = rng.randi_range(maxi(1, correct_answer - 15),
-									correct_answer + 15)
-		if wrong > 0 and wrong != correct_answer and wrong not in answers:
-			answers.append(wrong)
-	answers.shuffle()
-	return answers
-
-
 # Round lifecycle 
 
 func _start_round() -> void:
-	# clean previous
 	for b in balloons:
 		if is_instance_valid(b):
 			b.queue_free()
 	balloons.clear()
 
-	round_number += 1
-	if round_number > GameManager.TOTAL_ROUNDS:
+	if question_index >= questions.size():
 		_end_game()
 		return
 
-	_generate_problem()
-	round_time = GameManager.get_round_time()
+	var question: Dictionary = questions[question_index]
+	question_index += 1
+
+	current_equation = str(question.get("question", ""))
+	correct_answer = str(question.get("answer", ""))
+	possible_answers = question.get("possibleAnswers", [])
+	round_time = QUESTION_TIME
 	time_remaining = round_time
 	last_tick_sec = -1
 	round_active = true
 
-	# refresh UI
 	equation_label.text = current_equation
-	round_label.text = "Round %d / %d" % [round_number, GameManager.TOTAL_ROUNDS]
+	round_label.text = "%d / %d" % [question_index, questions.size()]
 	score_label.text = "%d    %d" % [score, streak]
 	feedback_label.text = "Pop the correct answer!"
 	feedback_label.add_theme_color_override("font_color", Color.WHITE)
 
-	# spawn balloons
-	var count: int = GameManager.get_balloon_count()
-	var answers := _build_answers(count)
+	_spawn_balloons()
+
+
+func _spawn_balloons() -> void:
+	var count := mini(possible_answers.size(), GRID_SLOTS)
+	var slots: Array[int] = []
+	for i in GRID_SLOTS:
+		slots.append(i)
+	slots.shuffle()
+
 	var vs := get_viewport_rect().size
-
-	var cols: int
-	match count:
-		20: cols = 5
-		24: cols = 6
-		28: cols = 7
-		_:  cols = 6
-	var rows := ceili(count / float(cols))
-
 	var top := 205.0
 	var bot := 20.0
 	var side := 30.0
 	var aw := vs.x - side * 2
 	var ah := vs.y - top - bot
-	var xs := aw / float(cols)
-	var ys := ah / float(rows)
+	var xs := aw / float(GRID_COLS)
+	var ys := ah / float(GRID_ROWS)
 	var bsz := Vector2(minf(xs * 0.75, 85), minf(ys * 0.92, 115))
 
 	for i in count:
+		var slot: int = slots[i]
+		var c := slot % GRID_COLS
+		var r := slot / GRID_COLS
 		var b := Balloon.new()
-		b.answer = answers[i]
+		b.answer = str(possible_answers[i])
 		b.set_sprite_index(i)
 		b.size = bsz
-		var c := i % cols
-		var r := i / cols
-		var pos := Vector2(
-			side + c * xs + xs / 2.0 - bsz.x / 2.0 + rng.randf_range(-8, 8),
-			top + r * ys + rng.randf_range(-6, 6))
-		b.base_position = pos
-		b.position = pos
+		b.base_position = Vector2(
+			side + c * xs + xs / 2.0 - bsz.x / 2.0,
+			top + r * ys + (ys - bsz.y) / 2.0)
+		b.position = b.base_position
 		b.bob_speed = rng.randf_range(1.2, 2.0)
 		b.bob_amplitude = rng.randf_range(4.0, 8.0)
 		b.popped.connect(_on_balloon_popped.bind(b))
@@ -280,16 +243,16 @@ func _start_round() -> void:
 		balloons.append(b)
 
 
-# nteraction
+# Interaction
 
-func _on_balloon_popped(answer: int, balloon: Balloon) -> void:
+func _on_balloon_popped(answer: String, balloon: Balloon) -> void:
 	if not round_active:
 		return
-	# Correct answer
+
 	if answer == correct_answer:
-		
 		round_active = false
 		streak += 1
+		correct_count += 1
 		var bonus := 10 + (streak - 1) * 2
 		score += bonus
 
@@ -306,7 +269,6 @@ func _on_balloon_popped(answer: int, balloon: Balloon) -> void:
 				Color("#176b58"))
 		balloon.pop_animate()
 
-		# freeze remaining balloons
 		for b in balloons:
 			if is_instance_valid(b) and b != balloon:
 				b.is_active = false
@@ -315,7 +277,7 @@ func _on_balloon_popped(answer: int, balloon: Balloon) -> void:
 		await get_tree().create_timer(1.4).timeout
 		_start_round()
 	else:
-		# Wrong answer
+		wrong_count += 1
 		streak = 0
 		_play_sfx(sfx_wrong)
 		feedback_label.text = "Not quite — try another balloon!"
@@ -328,13 +290,13 @@ func _time_up() -> void:
 	if not round_active:
 		return
 	round_active = false
+	missed_count += 1
 	streak = 0
 
-	feedback_label.text = "Time's up!  The answer was %d" % correct_answer
+	feedback_label.text = "Time's up!  The answer was %s" % correct_answer
 	feedback_label.add_theme_color_override("font_color", Color("#b83b5e"))
 	score_label.text = "%d    %d" % [score, streak]
 
-	# Flash the correct balloon for help
 	for b in balloons:
 		if is_instance_valid(b):
 			b.is_active = false
@@ -349,7 +311,15 @@ func _time_up() -> void:
 
 
 func _end_game() -> void:
-	GameManager.submit_score(score, round_number - 1)
+	GameManager.submit_score(score, question_index)
+	GameBridge.send_result({
+		"score": score,
+		"correct": correct_count,
+		"wrong": wrong_count,
+		"missed": missed_count,
+		"totalQuestions": questions.size(),
+		"durationMs": Time.get_ticks_msec() - _start_time_msec,
+	})
 	get_tree().change_scene_to_file("res://scenes/game_over.tscn")
 
 
@@ -391,4 +361,3 @@ func _show_floating_text(text: String, pos: Vector2, color: Color) -> void:
 	tw.tween_property(lbl, "position:y", pos.y - 65, 0.8).set_ease(Tween.EASE_OUT)
 	tw.tween_property(lbl, "modulate:a", 0.0, 0.8).set_delay(0.25)
 	tw.chain().tween_callback(lbl.queue_free)
-
