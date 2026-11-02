@@ -11,5 +11,6 @@ RUN mkdir -p /output && \
 FROM nginx:alpine
 
 COPY --from=builder /output/ /usr/share/nginx/html/
+COPY thumbnail.png /usr/share/nginx/html/thumbnail.png
 
 EXPOSE 80
