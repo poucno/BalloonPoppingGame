@@ -37,6 +37,6 @@ func _post(message: Dictionary) -> void:
 	if not OS.has_feature("web"):
 		return
 	JavaScriptBridge.eval(
-		"window.parent.postMessage(%s, window.location.origin);" % JSON.stringify(JSON.stringify(message)),
+		"window.parent.postMessage(%s, '*');" % JSON.stringify(JSON.stringify(message)),
 		true
 	)
