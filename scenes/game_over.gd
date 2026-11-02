@@ -30,13 +30,7 @@ func _create_ui() -> void:
 	var cx := vs.x / 2.0
 
 	# Title
-	var title_text: String
-	if GameManager.last_was_high_score:
-		title_text = "NEW HIGH SCORE! "
-	elif GameManager.last_score > 0:
-		title_text = "GREAT JOB!"
-	else:
-		title_text = "GAME OVER"
+	var title_text := "Nov osebni rekord" if GameManager.last_was_high_score else "Konec igre"
 	var title := _make_label(title_text, 48, Color("#243052"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.size = Vector2(720, 65)
@@ -44,36 +38,24 @@ func _create_ui() -> void:
 	add_child(title)
 
 	# Score
-	var sl := _make_label("Score: %d" % GameManager.last_score, 42, Color("#243052"))
+	var sl := _make_label("Točke: %d" % GameManager.last_score, 42, Color("#243052"))
 	sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sl.size = Vector2(500, 58)
 	sl.position = Vector2(cx - 250, vs.y * 0.22)
 	add_child(sl)
 
 	# High score
-	var hl := _make_label("Best: %d" % GameManager.get_high_score(), 26, Color("#4a6fa5"))
+	var hl := _make_label("Osebni rekord: %d" % GameManager.get_high_score(), 26, Color("#4a6fa5"))
 	hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hl.size = Vector2(400, 36)
 	hl.position = Vector2(cx - 200, vs.y * 0.35)
 	add_child(hl)
 
-	# Info
-	var info := _make_label(
-		"%s   •   Rounds: %d / %d" % [
-			GameManager.get_difficulty_name(),
-			GameManager.last_rounds_completed,
-			GameManager.TOTAL_ROUNDS],
-		20, Color("#5a7fa5"))
-	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	info.size = Vector2(520, 30)
-	info.position = Vector2(cx - 260, vs.y * 0.44)
-	add_child(info)
-
 	# Button
 	var bw := 225.0
 	var bh := 60.0
-	_styled_button("🎮  Play Again",
-		Vector2(cx - bw / 2.0, vs.y * 0.56),
+	_styled_button("Play Again",
+		Vector2(cx - bw / 2.0, vs.y * 0.48),
 		Vector2(bw, bh), _on_play_again, Color("#22c55e"))
 
 

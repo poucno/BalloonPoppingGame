@@ -29,7 +29,6 @@ var _start_time_msec := 0
 
 # UI
 var equation_label: Label
-var feedback_label: Label
 var score_label: Label
 var round_label: Label
 var timer_label: Label
@@ -70,7 +69,7 @@ func _process(delta: float) -> void:
 		if time_remaining <= 0.0:
 			time_remaining = 0.0
 			_time_up()
-		timer_label.text = "⏱ %.1f" % time_remaining
+		timer_label.text = "%.1f s" % time_remaining
 		var sec := int(ceil(time_remaining))
 		if time_remaining <= 5.0 and sec != last_tick_sec and time_remaining > 0.0:
 			last_tick_sec = sec
@@ -154,12 +153,6 @@ func _create_ui() -> void:
 	equation_label.size = Vector2(520, 62)
 	add_child(equation_label)
 
-	feedback_label = _make_label("", 22, Color.WHITE)
-	feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	feedback_label.position = Vector2(vs.x / 2.0 - 310, 122)
-	feedback_label.size = Vector2(620, 32)
-	add_child(feedback_label)
-
 	timer_label = _make_label("", 22, Color("#243052"))
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	timer_label.position = Vector2(vs.x / 2.0 - 50, 155)
@@ -201,8 +194,6 @@ func _start_round() -> void:
 	equation_label.text = current_equation
 	round_label.text = "%d / %d" % [question_index, questions.size()]
 	score_label.text = "%d    %d" % [score, streak]
-	feedback_label.text = "Pop the correct answer!"
-	feedback_label.add_theme_color_override("font_color", Color.WHITE)
 
 	_spawn_balloons()
 
@@ -259,8 +250,6 @@ func _on_balloon_popped(answer: String, balloon: Balloon) -> void:
 		_play_sfx(sfx_pop)
 		get_tree().create_timer(0.08).timeout.connect(func(): _play_sfx(sfx_correct))
 
-		feedback_label.text = "Correct!  +%d points!" % bonus
-		feedback_label.add_theme_color_override("font_color", Color("#176b58"))
 		score_label.text = "%d     %d" % [score, streak]
 
 		_spawn_confetti(balloon.position + balloon.size / 2.0, balloon.balloon_color)
@@ -280,8 +269,6 @@ func _on_balloon_popped(answer: String, balloon: Balloon) -> void:
 		wrong_count += 1
 		streak = 0
 		_play_sfx(sfx_wrong)
-		feedback_label.text = "Not quite — try another balloon!"
-		feedback_label.add_theme_color_override("font_color", Color("#b83b5e"))
 		score_label.text = "%d    %d" % [score, streak]
 		balloon.shake()
 
@@ -293,8 +280,6 @@ func _time_up() -> void:
 	missed_count += 1
 	streak = 0
 
-	feedback_label.text = "Time's up!  The answer was %s" % correct_answer
-	feedback_label.add_theme_color_override("font_color", Color("#b83b5e"))
 	score_label.text = "%d    %d" % [score, streak]
 
 	for b in balloons:
