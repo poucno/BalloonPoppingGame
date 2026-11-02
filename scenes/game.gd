@@ -70,7 +70,7 @@ func _process(delta: float) -> void:
 		if time_remaining <= 0.0:
 			time_remaining = 0.0
 			_time_up()
-		timer_label.text = "⏱ %.1f" % time_remaining
+		timer_label.text = "%.1f s" % time_remaining
 		var sec := int(ceil(time_remaining))
 		if time_remaining <= 5.0 and sec != last_tick_sec and time_remaining > 0.0:
 			last_tick_sec = sec
