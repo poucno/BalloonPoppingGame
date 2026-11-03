@@ -54,7 +54,7 @@ func _create_ui() -> void:
 	# Button
 	var bw := 225.0
 	var bh := 60.0
-	_styled_button("Play Again",
+	_styled_button("Igraj znova",
 		Vector2(cx - bw / 2.0, vs.y * 0.48),
 		Vector2(bw, bh), _on_play_again, Color("#22c55e"))
 
